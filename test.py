@@ -3,13 +3,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 import re
 
-def get_google_play_apps(category):
+def get_apps(category):
     try:
         results = search(
             category,
             lang='en',
             country='us',
-            n_hits=40
+            n_hits=30
         )
     except Exception as e:
         print(f"Failed to search for apps: {e}")
@@ -62,7 +62,7 @@ def get_reviews(app_id):
             
     return review_list
 
-def filter_reviews_by_date(review_list, months_ago):
+def remove_old_reviews(review_list, months_ago):
     cutoff_date = datetime.now() - timedelta(days=months_ago * 30)
     
     filtered_reviews = []
@@ -75,7 +75,7 @@ def filter_reviews_by_date(review_list, months_ago):
     
     return filtered_reviews
 
-def sanitize_sheet_name(sheet_name):
+def remove_illegal_char(sheet_name):
     sanitized_name = re.sub(r'[\\/*?[\]:]', '', sheet_name)
     return sanitized_name[:30]
 
@@ -84,18 +84,18 @@ def save_reviews_to_excel(apps, filename='app_reviews.xlsx'):
         with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
             for app in apps:
                 review_list = get_reviews(app['appId'])
-                filtered_reviews = filter_reviews_by_date(review_list, 6)
+                filtered_reviews = remove_old_reviews(review_list, 3)
                 
                 if filtered_reviews:
                     reviews_df = pd.DataFrame(filtered_reviews)
-                    sheet_name = sanitize_sheet_name(app['name'])
+                    sheet_name = remove_illegal_char(app['name'])
                     reviews_df.to_excel(writer, sheet_name=sheet_name, index=False)
     except Exception as e:
         print(f"Failed to write Excel file: {e}")
 
 if __name__ == "__main__":
     category = "NEWS"
-    apps = get_google_play_apps(category)
+    apps = get_apps(category)
     for app in apps:
         print(f"Name: {app['name']}")
         print(f"Developer: {app['developer']}")
